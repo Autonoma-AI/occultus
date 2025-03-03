@@ -1,0 +1,35 @@
+name: Publish NPM package
+
+on:
+  push:
+    branches:
+      - "main"
+
+env:
+  ARTIFACT_REGISTRY_SERVICE_ACCOUNT: ${{ secrets.ARTIFACT_REGISTRY_SERVICE_ACCOUNT }}
+
+jobs:
+  publish-npm-package:
+    name: Publish NPM package
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org/'
+          scope: '@autonoma'
+
+      - name: Publish
+        run: |-
+          VERSION=$(npm view . version)
+          jq --arg version "$VERSION" '. + { "version": $version }' package.json > temp.json && mv temp.json package.json
+          npm version patch --no-git-tag-version
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
